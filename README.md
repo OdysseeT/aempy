@@ -1,2 +1,2 @@
-# aem-py
+# AEMpy
 Python library for Adobe Experience Manager
