@@ -10,6 +10,8 @@ from .api_utils import (
     to_b64,
     writes_base64,
 )
+import json, ast
+from collections import namedtuple
 import nbformat
 
 class AEMContentsManager(ContentsManager):
@@ -19,10 +21,12 @@ class AEMContentsManager(ContentsManager):
         super(AEMContentsManager, self).__init__(*args, **kwargs)
 
     def get(self, path, content=True, type=None, format=None):
-        print("##### ODY Getting path: {} {} {} {}".format(path, content, type, format))
+        #print("##### ODY Getting path: {} {} {} {}".format(path, content, type, format))
         record = get_nb(path)
-        print("## record: ",record )
-        return self._notebook_model_from_aem(path, record, content)
+        #print("## record: ",record )
+        #record = eval(record.text)
+        #print("## record: ",record )
+        return self._notebook_model_from_aem(path, record.json(), content)
 
     def _get_directory(self, path, content, format):
         return super.get(path, content, format)
@@ -31,6 +35,8 @@ class AEMContentsManager(ContentsManager):
         """
         Build a notebook model from AEM.
         """
+        #print("ORIGINAL_RECORD: ",type(record), record)
+
         path = to_api_path(path)
         model = base_model(path)
 
@@ -40,24 +46,23 @@ class AEMContentsManager(ContentsManager):
         model['writable'] = True
         model['created'] = record['jcr:created']
         model['last_modified'] = record['cq:lastModified']
-        model['mimetype'] = 'json'
-        model['format'] = 'json'
 
         if content:
-            nb = nbformat.from_dict(record['notebook'])
-            #print("MY NOTEBOOK: ",nb)
-            nb = reads_base64(nb)
-            self.mark_trusted_cells(nb, path)
-            model['content'] = nb
+            # Fix CRX send back a list
+            notebook = record['notebook'][0]
+
+            notebook = ast.literal_eval(notebook) # String to dict
+            content = notebook['content']
+
+            content = reads_base64(json.dumps(content))
+            self.mark_trusted_cells(content, path)
+            model['content'] = content
             model['format'] = 'json'
             self.validate_notebook_model(model)
         return model
 
     def save(self, model, path):
-        #print(model)
-        #print(path)
         save_nb(path, model)
-        #super().save(model, path)
 
     def delete_file(self, path):
         super().delete_file(path)
