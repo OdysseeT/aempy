@@ -118,7 +118,8 @@ def reads_base64(nb, as_version=NBFORMAT_VERSION):
     Read a notebook from base64.
     """
     try:
-        return reads(b64decode(nb).decode('utf-8'), as_version=as_version)
+        return reads(nb, as_version=as_version)
+        #return reads(b64decode(nb).decode('utf-8'), as_version=as_version)
     except Exception as e:
         raise CorruptedFile(e)
 

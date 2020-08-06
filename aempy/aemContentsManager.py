@@ -10,6 +10,8 @@ from .api_utils import (
     to_b64,
     writes_base64,
 )
+import nbformat
+
 class AEMContentsManager(ContentsManager):
 
 
@@ -18,7 +20,7 @@ class AEMContentsManager(ContentsManager):
 
     def get(self, path, content=True, type=None, format=None):
         print("##### ODY Getting path: {} {} {} {}".format(path, content, type, format))
-        record = get_nb(path).text
+        record = get_nb(path)
         print("## record: ",record )
         return self._notebook_model_from_aem(path, record, content)
 
@@ -29,6 +31,8 @@ class AEMContentsManager(ContentsManager):
         """
         Build a notebook model from AEM.
         """
+        path = to_api_path(path)
+        model = base_model(path)
 
         model['name'] = record['jcr:title']
         model['path'] = path
@@ -38,17 +42,13 @@ class AEMContentsManager(ContentsManager):
         model['last_modified'] = record['cq:lastModified']
         model['mimetype'] = 'json'
         model['format'] = 'json'
-        print(model.keys())
-        return model
 
-        path = to_api_path(path)
-        model = base_model(path)
-        model['type'] = 'notebook'
-        model['last_modified'] = model['created'] = '00:00:00'
         if content:
-            content = reads_base64(record)
-            self.mark_trusted_cells(record, path)
-            model['content'] = content
+            nb = nbformat.from_dict(record['notebook'])
+            #print("MY NOTEBOOK: ",nb)
+            nb = reads_base64(nb)
+            self.mark_trusted_cells(nb, path)
+            model['content'] = nb
             model['format'] = 'json'
             self.validate_notebook_model(model)
         return model
