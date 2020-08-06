@@ -13,12 +13,16 @@ from .api_utils import (
 import json, ast
 from collections import namedtuple
 import nbformat
+from nbformat.v4 import new_notebook
 
 class AEMContentsManager(ContentsManager):
 
 
     def __init__(self, *args, **kwargs):
         super(AEMContentsManager, self).__init__(*args, **kwargs)
+
+    def put(self, path):
+        print("NO PUT")
 
     def get(self, path, content=True, type=None, format=None):
         #print("##### ODY Getting path: {} {} {} {}".format(path, content, type, format))
@@ -48,16 +52,22 @@ class AEMContentsManager(ContentsManager):
         model['last_modified'] = record['cq:lastModified']
 
         if content:
-            # Fix CRX send back a list
-            notebook = record['notebook'][0]
-
-            notebook = ast.literal_eval(notebook) # String to dict
-            content = notebook['content']
-
-            content = reads_base64(json.dumps(content))
-            self.mark_trusted_cells(content, path)
-            model['content'] = content
             model['format'] = 'json'
+
+            if 'notebook' in record:
+                notebook = record['notebook']#[0]
+
+                notebook = ast.literal_eval(notebook) # String to dict
+                content = notebook['content']
+
+                content = reads_base64(json.dumps(content))
+                self.mark_trusted_cells(content, path)
+                print("CHECKING: ",content)
+            else:
+                content = new_notebook()
+                print("CONTENT: ",content)
+
+            model['content'] = content
             self.validate_notebook_model(model)
         return model
 
