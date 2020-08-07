@@ -110,7 +110,7 @@ def writes_base64(nb, version=NBFORMAT_VERSION):
     """
     Write a notebook as base64.
     """
-    return b64encode(writes(nb, version=version).encode('utf-8'))
+    return writes(nb, version=version)#b64encode(writes(nb, version=version).encode('utf-8'))
 
 
 def reads_base64(nb, as_version=NBFORMAT_VERSION):
@@ -118,6 +118,7 @@ def reads_base64(nb, as_version=NBFORMAT_VERSION):
     Read a notebook from base64.
     """
     try:
+        #return reads(nb, as_version=as_version)
         return reads(nb, as_version=as_version)
         #return reads(b64decode(nb).decode('utf-8'), as_version=as_version)
     except Exception as e:

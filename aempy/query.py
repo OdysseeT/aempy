@@ -8,7 +8,7 @@ QUERY_BUILDER_URL = "/bin/querybuilder.json"
 
 def query_builder(path, properties):
     req = "{}?path={}&{}".format(QUERY_BUILDER_URL, path, properties)
-    return query_get(req)
+    return query_get(req).json()
 
 def query_get(query):
     full_query = "http://{}:{}{}".format(hostname, port, query)
