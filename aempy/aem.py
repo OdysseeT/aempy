@@ -36,19 +36,24 @@ class Assets(AEM):
 
 
     def get_asset(self, path):
-        response = query_get(path)
-        #print(response)
-        return Image.open(BytesIO(response.content))
+        response = query_get("{}.infinity.json".format(path))
+        return response.json()
 
-    def get_images(self, path, limit=5):
+    def get_assets(self, path, limit=5):
         path = "{}".format(path)
         properties = "1_property=jcr:primaryType&1_property.value=dam:Asset&1_property.operation=like&orderby=path&p.limit="+str(limit)
 
         data = query_builder(path, properties)
-        img_list = []
-        for img in data['hits']:
-            img_list.append(img['path'])
+        img_list = [img['path'] for img in data['hits']]
+        #for img in data['hits']:
+        #    img_list.append(img['path'])
         return img_list
+
+    def display(self, img, dampath="/content/dam/"):
+        path = "{}{}".format(dampath, img['jcr:content']['dam:relativePath'])
+        response = query_get(path)
+        return Image.open(BytesIO(response.content))
+
 
 class System(AEM):
     log_file = {
