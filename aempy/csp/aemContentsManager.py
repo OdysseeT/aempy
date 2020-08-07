@@ -47,9 +47,9 @@ class AEMContentsManager(ContentsManager):
         return AEMCheckpoints
 
     def get(self, path, content=True, type='notebook', format=None):
-        
+
         try:
-            return _get_notebook(path=path, content=content, format=format)
+            return self._get_notebook(path=path, content=content, format=format)
         except CorruptedFile as e:
             self.log.error(
                 u'Corrupted file encountered at path %r. %s',
