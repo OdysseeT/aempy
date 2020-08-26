@@ -11,7 +11,6 @@ from collections import namedtuple
 from .notebook import save_nb, get_nb
 from .utils.ipycompat import Bool, ContentsManager, from_dict
 from .checkpoints import AEMCheckpoints
-from urllib.parse import quote
 
 from .api_utils import (
     base_directory_model,
@@ -86,9 +85,14 @@ class AEMContentsManager(ContentsManager):
         model['last_modified'] = record['cq:lastModified']
 
         if content:
+            if 'cells' in record:
+                print("RECORD: ", record)
+                json_record = json.dumps(record)
+                json_record = json_record.replace(" \" ", "\"" )
+                print("JSON RECORD: ", json_record)
+                #raw_cells = record['cells']
 
-            if 'content' in record:
-                content = reads_base64(record['content'])
+                content = reads_base64(json_record)
                 self.mark_trusted_cells(content, path)
             else:
                 content = new_notebook()
@@ -147,9 +151,7 @@ class AEMContentsManager(ContentsManager):
         nb_contents = from_dict(model['content'])
         self.check_and_sign(nb_contents, path)
 
-        content64 = writes_base64(nb_contents)
-        content64 = quote(content64, safe='') # Need extra encoding for character like sharp
-        save_nb(path, content64)
+        save_nb(path, nb_contents)
 
         # It's awkward that this writes to the model instead of returning.
         self.validate_notebook_model(model)

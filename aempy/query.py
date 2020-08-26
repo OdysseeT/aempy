@@ -18,11 +18,13 @@ def query_get(query):
     return sess.get(full_query)
 
 def query_post(path, content):
-    full_query = "http://{}:{}{}?{}".format(hostname, port, path, content)
+    full_query = "http://{}:{}{}".format(hostname, port, path)
     print("Request: {}".format(full_query))
+    print("\tData: {}".format(content))
 
     sess = get_session()
-    return sess.post(full_query)
+    sess.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+    return sess.post(full_query, data=content)
 
 import requests
 from requests.auth import HTTPBasicAuth
