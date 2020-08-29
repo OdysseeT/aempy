@@ -157,13 +157,16 @@ class System(AEM):
         for i in range(len(log)):
             words = log[i].split(" ")
             if len(words)<4: continue
-            ldate = datetime.datetime.strptime((words[0]+" "+words[1]).strip(), '%d.%m.%Y %H:%M:%S.%f')
-            llevel = words[2].strip().replace("*","")
-            if llevel is "ERROR":
-                # TODO Need to parse the class correctly
-                lclass = words[3].strip().replace("[","").replace("]","")
-            else:
-                lclass = words[3].strip().replace("[","").replace("]","")
-            lmessage = words[4:]
-            df.loc[i] = [ldate, llevel, lclass, lmessage]
+            try:
+                ldate = datetime.datetime.strptime((words[0]+" "+words[1]).strip(), '%d.%m.%Y %H:%M:%S.%f')
+                llevel = words[2].strip().replace("*","")
+                if llevel is "ERROR":
+                    # TODO Need to parse the class correctly
+                    lclass = words[3].strip().replace("[","").replace("]","")
+                else:
+                    lclass = words[3].strip().replace("[","").replace("]","")
+                lmessage = words[4:]
+                df.loc[i] = [ldate, llevel, lclass, lmessage]
+            except:
+                pass
         return df
