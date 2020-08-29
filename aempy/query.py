@@ -1,8 +1,8 @@
 
 from .session import get_session
 
-hostname = "localhost"
-port = 4502
+#hostname = "localhost"
+#port = 4502
 
 QUERY_BUILDER_URL = "/bin/querybuilder.json"
 

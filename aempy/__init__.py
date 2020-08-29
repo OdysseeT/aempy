@@ -1,4 +1,4 @@
-from .query import query_get, query_builder, query_post
+from .query import query_builder #, query_post, query_get
 import pandas as pd
 from PIL import Image
 from io import BytesIO
@@ -37,12 +37,26 @@ class AEM():
         response = self._query_get(AEM.system_info['productinfo'])
         return AEM.ProductInfo(response)
 
-    def _query_get(self, request, format="json"):
-        response = query_get(request)
+    def _query_get(self, request, format=None):
+        response = self.__query_get(request)
         if format is "json":
             return response.json()
         else:
             return response
+
+    def __query_get(self, query):
+        formatted_url = self.__format_url(self.host)
+        full_query = "{}:{}{}".format(formatted_url, self.port, query)
+        print("Request: {}".format(full_query))
+        return self.session.get(full_query)
+
+    def __format_url(self, host):
+        url = ""
+        if host.startswith("https") or host.startswith("http"):
+            url = host
+        else:
+            url = "http://{}".format(host)
+        return url
 
     class ProductInfo():
         def __init__(self, obj):
@@ -60,7 +74,7 @@ class Assets(AEM):
 
 
     def get_asset(self, path):
-        response = query_get("{}.infinity.json".format(path))
+        response = self._query_get("{}.infinity.json".format(path))
         return response.json()
 
     def get_assets(self, path, limit=5):
@@ -77,7 +91,7 @@ class Assets(AEM):
         elif 'cq:name' in img_content:
             path = "{}/{}".format(img_content['cq:parentPath'], img_content['cq:name'])
 
-        response = query_get(path)
+        response = self._query_get(path)
         return Image.open(BytesIO(response.content))
 
 class QueryBuilder(AEM):
@@ -114,43 +128,51 @@ class QueryBuilder(AEM):
 
 
 class System(AEM):
-    log_file = {
-        "error":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/error.log",
-        "request":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/request.log",
-        "history":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/history.log",
-        "auditlog":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/auditlog.log",
-        "access":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/access.log",
-        "upgrade":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/upgrade.log",
-    }
+
+    log_url = "/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/{}"
+
+    #log_file = {
+    #    "error":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/error.log",
+    #    "request":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/request.log",
+    #    "history":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/history.log",
+    #    "auditlog":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/auditlog.log",
+    #    "access":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/access.log",
+    #    "upgrade":"/system/console/slinglog/tailer.txt?tail={}&grep=*&name=/logs/upgrade.log",
+    #}
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
 
-    def _get_log(self, name, qty):
-        logfile = System.log_file[name]
-        logfile = logfile.format(qty)
-        response = query_get(logfile)
+    def get_log(self, name, qty=10000):
+        #logfile = System.log_file[name]
+        logfile = System.log_url.format(qty, name)
+        response = self._query_get(logfile)
         return response.text.split("\n")
 
     def log_error(self, qty=10000):
-        return self._get_log('error', qty)
+        return self.get_log('error.log', qty)
 
     def log_request(self, qty=10000):
-        return self._get_log('request', qty)
+        return self.get_log('request.log', qty)
 
     def log_history(self, qty=10000):
-        return self._get_log('history', qty)
+        return self.get_log('history.log', qty)
 
     def log_audilog(self, qty=10000):
-        return self._get_log('audilog', qty)
+        return self.get_log('audilog.log', qty)
 
     def log_access(self, qty=10000):
-        return self._get_log('access', qty)
+        return self.get_log('access.log', qty)
 
     def log_upgrade(self, qty=10000):
-        return self._get_log('upgrade', qty)
+        return self.get_log('upgrade.log', qty)
 
-    def log_to_pandas(self, log):
+    def logfile_to_dataframe(self, log):
+        logile = open(log, "r")
+        logs = logile.readlines()
+        return self.log_to_dataframe(logs)
+
+    def log_to_dataframe(self, log):
         column_names = ["date", "level", "class", "message"]
         df = pd.DataFrame(columns = column_names)
 
@@ -170,3 +192,15 @@ class System(AEM):
             except:
                 pass
         return df
+
+    def plot(self, df, freq="1min"):
+        try:
+            t = (df.assign(counter = 1)
+             .set_index('date')
+             .groupby([pd.Grouper(freq=freq), 'level']).sum()
+             .squeeze()
+             .unstack())
+
+            t.plot(figsize=(15,4))
+        except AttributeError:
+            print("Error: Frequency is too large.")
