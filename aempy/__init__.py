@@ -149,7 +149,7 @@ class System(AEM):
         response = self._query_get(logfile)
         return response.text.split("\n")
 
-    def log_error(self, qty=10000):
+    def log_error(self, qty=10000, to_df=True):
         return self.get_log('error.log', qty)
 
     def log_request(self, qty=10000):
@@ -167,12 +167,12 @@ class System(AEM):
     def log_upgrade(self, qty=10000):
         return self.get_log('upgrade.log', qty)
 
-    def logfile_to_dataframe(self, log):
+    def error_logfile_to_df(self, log):
         logile = open(log, "r")
         logs = logile.readlines()
-        return self.log_to_dataframe(logs)
+        return self.error_log_to_df(logs)
 
-    def log_to_dataframe(self, log):
+    def error_log_to_df(self, log):
         column_names = ["date", "level", "class", "message"]
         df = pd.DataFrame(columns = column_names)
 
