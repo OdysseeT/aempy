@@ -8,7 +8,7 @@ from traitlets import default
 import json, ast
 from collections import namedtuple
 
-from .notebook import save_nb, get_nb
+from .notebook import AEMNotebookManager
 from .utils.ipycompat import Bool, ContentsManager, from_dict
 from .checkpoints import AEMCheckpoints
 
@@ -34,13 +34,19 @@ from .error import (
     RenameRoot,
 )
 
-
-
 class AEMContentsManager(ContentsManager):
-
 
     def __init__(self, *args, **kwargs):
         super(AEMContentsManager, self).__init__(*args, **kwargs)
+
+        notebookApp = kwargs["parent"]
+
+        aem_url = notebookApp.contents_manager_class.aemurl
+        aem_port = notebookApp.contents_manager_class.aemport
+        aem_user = notebookApp.contents_manager_class.aemuser
+        aem_pwd = notebookApp.contents_manager_class.aempwd
+
+        self.aem_notebook = AEMNotebookManager(aem_url, aem_port, aem_user, aem_pwd)
 
     @default('checkpoints_class')
     def _default_checkpoints_class(self):
@@ -62,7 +68,8 @@ class AEMContentsManager(ContentsManager):
         Get a notebook from AEM.
         """
         try:
-            record = get_nb(path).json()
+            record = self.aem_notebook.get_nb(path).json()
+
 
         except NoSuchFile:
             self.no_such_entity(path)
@@ -84,15 +91,27 @@ class AEMContentsManager(ContentsManager):
         model['created'] = record['jcr:created']
         model['last_modified'] = record['cq:lastModified']
 
+        # Clean JSON content to avoid Jupyter warnings
+        del record['cq:template']
+        del record['jcr:title']
+        del record['jcr:primaryType']
+        del record['jcr:created']
+        del record['cq:lastModified']
+        del record['jcr:createdBy']
+        del record['cq:lastModifiedBy']
+        del record['sling:resourceType']
+
         if content:
             if 'cells' in record:
-                print("RECORD: ", record)
-                json_record = json.dumps(record)
-                json_record = json_record.replace(" \" ", "\"" )
-                print("JSON RECORD: ", json_record)
-                #raw_cells = record['cells']
 
-                content = reads_base64(json_record)
+                cells_list = []
+                for cell in record["cells"]:
+                    cells_list.append(json.loads(cell))
+
+                record["cells"] = cells_list
+                reformatted = json.dumps(record)
+
+                content = reads_base64(reformatted)
                 self.mark_trusted_cells(content, path)
             else:
                 content = new_notebook()
@@ -151,7 +170,8 @@ class AEMContentsManager(ContentsManager):
         nb_contents = from_dict(model['content'])
         self.check_and_sign(nb_contents, path)
 
-        save_nb(path, nb_contents)
+        self.aem_notebook.delete_cells(path, nb_contents)
+        self.aem_notebook.save_nb(path, nb_contents)
 
         # It's awkward that this writes to the model instead of returning.
         self.validate_notebook_model(model)
@@ -164,7 +184,7 @@ class AEMContentsManager(ContentsManager):
         super().rename_file(old_path, path)
 
     def file_exists(self, path):
-        file = get_nb(path)
+        file = self.aem_notebook.get_nb(path)
         return file is not None
 
     def dir_exists(self, path):
@@ -174,7 +194,7 @@ class AEMContentsManager(ContentsManager):
         return False # TODO not necessary
 
     def exists(self, path):
-        file = get_nb(path)
+        file = self.aem_notebook.get_nb(path)
         return file is not None
 
     def _get_directory(self, path, content, format):
