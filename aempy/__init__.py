@@ -35,7 +35,7 @@ class AEM():
 
     def info(self):
         response = self._query_get(AEM.system_info['productinfo'])
-        return AEM.ProductInfo(response)
+        return AEM.ProductInfo(response.json())
 
     def _query_get(self, request, format=None):
         response = self.__query_get(request)

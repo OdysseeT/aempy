@@ -3,7 +3,4 @@
 # AEMpy
 Python library for Adobe Experience Manager
 
-
-### TODO:
-- Make user/password configurable
-- Make URL configurable
+See folder *examples* for HowTo and tutorials
